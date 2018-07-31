@@ -1,0 +1,36 @@
+import tensorflow as tf
+from tensorflow.examples.tutorials.mnist import input_data
+
+mnist = input_data.read_data_sets("./", one_hot=True)
+
+# make some place holders
+x = tf.placeholder(tf.float32, [None, 784])
+weight = tf.Variable(tf.zeros([784, 10]))
+bias = tf.Variable(tf.zeros([10]))
+# **dont want this now  y = tf.nn.softmax(tf.matmul(x, weight) + bias)
+y_ = tf.placeholder(tf.float32, [None, 10])
+# **dont want this now  cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(y), reduction_indices=[1]))
+# **dont want this now  train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
+
+# create the model and its structure
+hid = tf.layers.dense(x, 500, activation=tf.nn.relu)
+hid1 = tf.layers.dense(hid, 250, activation=tf.nn.relu)
+out = tf.layers.dense(hid1, 10, activation=tf.nn.relu)
+loss = tf.losses.mean_squared_error(y_, out)
+opt = tf.train.GradientDescentOptimizer(learning_rate=0.5)
+update = opt.minimize(loss)
+
+# start a session for training
+sess = tf.InteractiveSession()
+tf.global_variables_initializer().run()
+# the training loop
+for i in range(1000):
+    batch_xs, batch_ys = mnist.train.next_batch(150)
+    l, _ = sess.run([loss, update], feed_dict={x: batch_xs, y_: batch_ys})
+    if i % 100 == 0:
+        print('loss: ' + str(l))
+
+# make predictions and calculate accuracy
+correct_predict = tf.equal(tf.argmax(out, 1), tf.argmax(y_, 1))
+accuracy = tf.reduce_mean(tf.cast(correct_predict, tf.float32))
+print(sess.run(accuracy, feed_dict={x: mnist.test.images, y_: mnist.test.labels}))

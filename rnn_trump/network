@@ -1,0 +1,48 @@
+
+import tflearn
+from tflearn.data_utils import *
+
+
+def make_model(mx_len, dictionary):
+    g = tflearn.input_data([None, mx_len, 100])
+    # **computers not big enough  g = tflearn.lstm(g, 512, return_seq=True)
+    # **computers not big enough  g = tflearn.dropout(g, 0.5)
+    # **computers not big enough  g = tflearn.lstm(g, 150, return_seq=True)
+    # **computers not big enough  g = tflearn.dropout(g, 0.5)
+    g = tflearn.lstm(g, 150, dynamic=True)
+    g = tflearn.dropout(g, 0.5)
+    g = tflearn.fully_connected(g, len(dictionary), activation='softmax')
+    g = tflearn.regression(g, optimizer='adam', loss='categorical_crossentropy',
+                           learning_rate=0.001)
+    mod = tflearn.SequenceGenerator(g, dictionary=dictionary,
+                                    seq_maxlen=mx_len,
+                                    clip_gradients=5.0,)
+    return mod
+
+
+if __name__ == '__main__':
+    # get the data ready
+    d = open('trumpys_tweets.txt')
+    d = d.readlines()
+    a, b, char_to_index = textfile_to_semi_redundant_sequences('trumpys_tweets.txt', seq_maxlen=150, redun_step=3)
+    tweet_vec = []
+    max_len = 0
+    for line in d:
+        if max_len < len(line):
+            max_len = len(line)
+    # make the model
+    model = make_model(max_len, char_to_index)
+
+    # train and generate tweets
+    for i in range(5):
+        model.fit(a, b, validation_set=0.1, batch_size=16, n_epoch=50)
+        print('__________________________________')
+        seed = random_sequence_from_textfile('trumpys_tweets.txt', max_len)
+        print("-- Test with temperature of 1.0 --")
+        print(model.generate(150, temperature=1.0, seq_seed=seed))
+        print("-- Test with temperature of 0.5 --")
+        print(model.generate(150, temperature=0.5, seq_seed=seed))
+        print("-- Test with temperature of 0.25 --")
+        print(model.generate(150, temperature=0.25, seq_seed=seed))
+    print("done")
+
